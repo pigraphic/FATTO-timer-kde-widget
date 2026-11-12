@@ -5,10 +5,10 @@ A native KDE Plasma 6 plasmoid for tracking tasks and recording time spent using
 ## Features
 
 - **Today's Schedule**: Automatically displays all cards scheduled for the current date.
-- **Workspace Filtering**:
-  - Quickly filter today's schedule and cards by workspace using the dedicated header dropdown.
-  - Includes an **All Workspaces** option to view scheduled tasks across all your accessible workspaces.
-  - Workspace selection is automatically persisted in your widget configuration.
+- **Domain & Workspace Switching**:
+  - **Domain Switcher**: Seamlessly toggle between multiple domains (e.g. `fsoft`, `pig`) directly from the widget header bar without re-entering credentials.
+  - **Workspace Filtering**: Filter scheduled cards by workspace within the active domain, or choose **All Workspaces** to aggregate all cards.
+  - Selected domain and workspace are automatically remembered and persisted across sessions.
 - **Responsive Layout & Boundary Containment**:
   - Fluidly adapts to any dimensions, from compact panel popups (down to ~240px width) to wide desktop widgets.
   - Adaptive two-row header with automatic text elision to prevent horizontal overflow.
