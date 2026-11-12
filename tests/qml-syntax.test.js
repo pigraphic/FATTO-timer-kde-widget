@@ -403,3 +403,16 @@ test('main.qml defines workspace management properties and functions', () => {
   assert.match(main, /FattoClient\.getBoards\(/);
   assert.match(main, /loadWorkspaces\(/);
 });
+
+test('FullRepresentation.qml contains workspace selector ComboBox with responsive layout', () => {
+  const content = fs.readFileSync('contents/ui/FullRepresentation.qml', 'utf8');
+  assert.match(content, /workspaceComboBox/);
+  assert.match(content, /selectWorkspace/);
+  assert.match(content, /clip:\s*true/);
+  assert.doesNotMatch(content, /ActiveCardHero[\s\S]*?Layout\.preferredHeight:\s*Kirigami\.Units\.gridUnit\s*\*\s*7/);
+});
+
+test('main.qml returns empty schedule immediately when selected workspace has no boards', () => {
+  const main = fs.readFileSync('contents/ui/main.qml', 'utf8');
+  assert.match(main, /boardIds\.length\s*===\s*0[\s\S]*?onScheduleFetched\(\s*null,\s*\[\],\s*200\s*\)/);
+});

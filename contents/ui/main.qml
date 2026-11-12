@@ -194,6 +194,10 @@ PlasmoidItem {
                             }
                         }
                     }
+                    if (boardIds.length === 0) {
+                        onScheduleFetched(null, [], 200);
+                        return;
+                    }
                     FattoClient.getSchedule(sUrl, token, todayStr, boardIds, onScheduleFetched);
                 });
             } else {

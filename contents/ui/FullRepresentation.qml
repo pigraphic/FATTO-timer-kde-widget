@@ -7,6 +7,7 @@ import "js/TimeUtils.js" as TimeUtils
 
 Item {
     id: root
+    clip: true
 
     Layout.minimumWidth: Kirigami.Units.gridUnit * 22
     Layout.minimumHeight: Kirigami.Units.gridUnit * 26
@@ -17,8 +18,9 @@ Item {
         anchors.fill: parent
         anchors.margins: Kirigami.Units.gridUnit
         spacing: Kirigami.Units.smallSpacing * 2
+        clip: true
 
-        // Header bar
+        // Header bar row 1: App icon, Title & Date, Refresh, Configure
         RowLayout {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
@@ -34,11 +36,15 @@ Item {
                 spacing: 0
 
                 QQC2.Label {
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
                     text: i18n("FATTO Tasks")
                     font.bold: true
                     font.pixelSize: Kirigami.Units.gridUnit * 0.95
                 }
                 QQC2.Label {
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
                     text: TimeUtils.formatHeaderDate(new Date())
                     font.pixelSize: Kirigami.Units.gridUnit * 0.7
                     opacity: 0.7
@@ -63,10 +69,44 @@ Item {
             }
         }
 
+        // Header bar row 2: Workspace selector combobox
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Kirigami.Units.smallSpacing
+            visible: plasmoidRoot.workspaceList && plasmoidRoot.workspaceList.length > 1
+
+            Kirigami.Icon {
+                source: "folder-symbolic"
+                implicitWidth: 16
+                implicitHeight: 16
+                opacity: 0.7
+            }
+
+            QQC2.ComboBox {
+                id: workspaceComboBox
+                Layout.fillWidth: true
+                model: plasmoidRoot.workspaceList
+                textRole: "name"
+                valueRole: "id"
+
+                currentIndex: {
+                    if (!plasmoidRoot.workspaceList) return 0;
+                    for (var i = 0; i < plasmoidRoot.workspaceList.length; i++) {
+                        if (plasmoidRoot.workspaceList[i].id === plasmoidRoot.selectedWorkspaceId) return i;
+                    }
+                    return 0;
+                }
+
+                onActivated: function(index) {
+                    var item = plasmoidRoot.workspaceList[index];
+                    if (item) plasmoidRoot.selectWorkspace(item.id);
+                }
+            }
+        }
+
         // Active Card Hero
         ActiveCardHero {
             Layout.fillWidth: true
-            Layout.preferredHeight: Kirigami.Units.gridUnit * 7
             activeCard: plasmoidRoot.activeCard
             isRunning: plasmoidRoot.isActiveCardRunning
             todaySeconds: plasmoidRoot.activeCardTodaySeconds
