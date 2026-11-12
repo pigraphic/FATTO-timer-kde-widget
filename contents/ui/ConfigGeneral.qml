@@ -12,6 +12,7 @@ KCM.SimpleKCM {
     property alias cfg_username: usernameField.text
     property alias cfg_password: passwordField.text
     property alias cfg_pollInterval: pollIntervalSpin.value
+    property string cfg_selectedWorkspace: ""
 
     Kirigami.FormLayout {
         id: formLayout

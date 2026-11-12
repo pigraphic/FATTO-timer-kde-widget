@@ -73,7 +73,7 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
-            visible: plasmoidRoot.workspaceList && plasmoidRoot.workspaceList.length > 1
+            visible: plasmoidRoot.workspaceList && plasmoidRoot.workspaceList.length > 0
 
             Kirigami.Icon {
                 source: "folder-symbolic"
