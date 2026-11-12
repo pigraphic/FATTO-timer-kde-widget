@@ -125,8 +125,16 @@ PlasmoidItem {
                 handleApiError(err, status);
             } else if (Array.isArray(items)) {
                 var list = [{ id: "", name: i18n("All Workspaces") }];
+                var foundSelected = false;
                 for (var i = 0; i < items.length; i++) {
                     list.push({ id: items[i].id, name: items[i].name });
+                    if (items[i].id === selectedWorkspaceId) {
+                        foundSelected = true;
+                    }
+                }
+                if (selectedWorkspaceId && !foundSelected) {
+                    selectedWorkspaceId = "";
+                    Plasmoid.configuration.selectedWorkspace = "";
                 }
                 workspaceList = list;
             }
@@ -184,6 +192,8 @@ PlasmoidItem {
                 FattoClient.getBoards(sUrl, token, selectedWorkspaceId, function(bErr, boards, bStatus) {
                     if (bErr) {
                         handleApiError(bErr, bStatus);
+                        onScheduleFetched(bErr, null, bStatus);
+                        return;
                     }
                     var boardIds = [];
                     if (Array.isArray(boards)) {
