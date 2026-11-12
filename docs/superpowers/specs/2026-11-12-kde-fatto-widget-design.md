@@ -1,32 +1,34 @@
-# Design Specification: KDE Plasma 6 "FATTO" Desktop Widget
+# Design Specification: KDE Plasma 6 "FATTO" Desktop Widget (REST API)
 
 ## 1. Overview
-The **KDE "FATTO" Desktop Widget** is a native KDE Plasma 6 Plasmoid designed to streamline daily task execution and time tracking. It connects to the FATTO web application via MCP JSON-RPC using an API key (`fatto_...`). It automatically displays all tasks scheduled for the current day, allows switching between tasks, displays personal time spent today versus total time spent on the selected task, and provides immediate controls to start or pause the active timer.
+The **KDE "FATTO" Desktop Widget** is a native KDE Plasma 6 Plasmoid designed to streamline daily task execution and time tracking. It connects directly to the FATTO web application via its native REST API (`/api/kanban/...` and `/api/user/...`). It authenticates using standard username and password credentials, automatically displays tasks scheduled for the current day, allows switching between tasks, displays personal time spent today versus total time spent on the selected task, and provides immediate controls to start or pause the active timer.
 
 ---
 
 ## 2. Goals and Requirements
 
 ### 2.1 Core Functional Requirements
-1. **Scheduled Tasks Polling**: Periodically fetch cards scheduled for the current date (`YYYY-MM-DD`).
-2. **Card Review & Selection**: Allow the user to review the day's scheduled tasks and select the active card to work on.
-3. **Timer Control**: Prominent, single-click Start/Pause button for the selected card.
-4. **Dual Time Tracking (Option A - Personal-focused)**:
-   - **Time Spent Today**: Sum of the current user's timer sessions for the active card during the current calendar day.
-   - **User's Total Time**: Sum of all of the current user's timer sessions for the active card across all time.
-   - **Card Global Total**: (Secondary display) Total cumulative time spent by all collaborators on the card.
-5. **Concurrent / Independent Timers**:
-   - Timers run independently.
-   - If other cards currently have running timers for the user, a notification banner displays the other active tasks with their elapsed times and a quick-pause action.
-6. **Adaptive Form Factor**:
+1. **Direct REST Integration**: Connect directly to FATTO's REST endpoints without intermediate proxies or MCP servers.
+2. **Session Authentication**: Authenticate via `POST /api/user/login` using username and password, storing the session JWT token and automatically refreshing it via `POST /api/user/token/refresh`.
+3. **Scheduled Tasks Polling**: Periodically fetch cards scheduled for the current date (`YYYY-MM-DD`) via `GET /api/kanban/schedule/list`.
+4. **Card Review & Selection**: Allow the user to review the day's scheduled tasks and select the active card to work on.
+5. **Timer Control**: Prominent, single-click Start/Pause button for the selected card via `POST /api/kanban/timer/start` and `POST /api/kanban/timer/pause`.
+6. **Dual Time Tracking (Option A - Personal-focused)**:
+   - **Time Spent Today (Yours)**: Sum of the current user's timer sessions for the active card during the current calendar day.
+   - **User's Total Time (Yours)**: Sum of all of the current user's timer sessions for the active card across all time.
+   - **Card Global Total**: (Secondary metric) Total cumulative time spent by all collaborators on the card.
+7. **Concurrent / Independent Timers**:
+   - Timers run independently on the backend.
+   - If other cards currently have running timer sessions for the user, a notification banner displays the other active tasks with their live elapsed times and quick-pause buttons.
+8. **Adaptive Form Factor**:
    - **Panel Representation**: Compact widget showing active card code, live ticking timer, and play/pause toggle. Clicking opens the popup.
    - **Desktop / Popup Representation**: Full dashboard with active timer hero view, other running timers banner, and the scheduled cards list.
-7. **Smooth Client-side Ticking**: An internal 1-second timer increments open session counters smoothly in real time without querying the backend every second.
+9. **Smooth Client-side Ticking**: An internal 1-second timer increments open session counters smoothly in real time without querying the backend every second.
 
-### 2.2 Constraints & Integration
-* Authenticate using the user's personal API Key (`Authorization: Bearer fatto_...`).
-* Extend the FATTO backend MCP server (`/data2/liwe/cf-liwe3/fatto/liwe3/modules/mcpkanban`) to expose `kanban_schedule_list`.
-* Connect via HTTP JSON-RPC 2.0 to `<host>/api/mcp-kanban`.
+### 2.2 Constraints & Technology Stack
+* **KDE Plasma 6**: Written using QML, QtQuick, Kirigami, and PlasmaComponents 3.
+* **Pure REST API**: Standard HTTP `GET` and `POST` calls with `Authorization: Bearer <jwt_token>`.
+* **Zero Backend Code Changes**: Relies exclusively on FATTO's existing, verified REST API routes.
 
 ---
 
@@ -49,57 +51,37 @@ The **KDE "FATTO" Desktop Widget** is a native KDE Plasma 6 Plasmoid designed to
 │   │                    ├── Active Card                  │   │
 │   │                    ├── Schedule Model               │   │
 │   │                    ├── 1s Ticking Timer             │   │
-│   │                    └── FattoMcpClient.js            │   │
+│   │                    └── FattoRestClient.js           │   │
 │   └───────────────────────────┬─────────────────────────┘   │
 └───────────────────────────────┼─────────────────────────────┘
-                                │ JSON-RPC 2.0 (HTTPS)
-                                │ Bearer fatto_...
+                                │ HTTPS REST Calls
+                                │ Bearer <jwt_token>
                                 ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   FATTO Backend API                         │
-│             (/api/mcp-kanban Endpoint)                      │
+│                   FATTO REST API Backend                    │
 │                                                             │
-│   Tools:                                                    │
-│   ├── kanban_schedule_list (New)                            │
-│   ├── kanban_timer_mine                                     │
-│   ├── kanban_timer_get                                      │
-│   ├── kanban_timer_sessions                                 │
-│   ├── kanban_timer_start                                    │
-│   └── kanban_timer_pause                                    │
+│   Auth:                                                     │
+│   ├── POST /api/user/login                                  │
+│   └── POST /api/user/token/refresh                          │
+│                                                             │
+│   Kanban & Timers:                                          │
+│   ├── GET  /api/kanban/schedule/list                        │
+│   ├── GET  /api/kanban/timer/mine                           │
+│   ├── GET  /api/kanban/timer/get                            │
+│   ├── GET  /api/kanban/timer/sessions                       │
+│   ├── POST /api/kanban/timer/start                          │
+│   └── POST /api/kanban/timer/pause                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 3.1 Backend Extension (`/data2/liwe/cf-liwe3/fatto`)
-The FATTO backend already implements `kanban_schedule_list` in `liwe3/modules/kanban/backend/src/methods/kanban-schedule-list.ts`.
-We register this tool in `liwe3/modules/mcpkanban/backend/src/tools.ts`:
-* **Name**: `kanban_schedule_list`
-* **Description**: Lists scheduled card items for calendar views filtering by date range, optional boards, and user.
-* **Module**: `'kanban'`
-* **Call**: `'kanban.call.schedule.list'`
-* **Gate**: `LOGGED`
-* **Input Schema**:
-  ```json
-  {
-    "type": "object",
-    "properties": {
-      "from_date": { "type": "string", "description": "Start date (YYYY-MM-DD)" },
-      "to_date": { "type": "string", "description": "End date (YYYY-MM-DD)" },
-      "id_boards": { "type": "array", "items": { "type": "string" }, "description": "Optional board IDs filter" },
-      "id_user": { "type": "string", "description": "Optional user ID filter" }
-    },
-    "required": ["from_date", "to_date"],
-    "additionalProperties": false
-  }
-  ```
-
-### 3.2 Plasmoid Package Layout (`/data2/liwe/fatto-widget`)
+### 3.1 Plasmoid Package Layout (`/data2/liwe/fatto-widget`)
 ```
 fatto-widget/
 ├── metadata.json                          # KDE Plasma 6 applet metadata (org.kde.fatto)
 ├── contents/
 │   ├── config/
-│   │   ├── main.xml                       # KConfigXT schema for plasmoid configuration
-│   │   └── config.qml                     # Plasma settings dialog pages
+│   │   ├── main.xml                       # KConfigXT schema (serverUrl, username, password, pollInterval)
+│   │   └── config.qml                     # Plasma settings dialog registration
 │   └── ui/
 │       ├── main.qml                       # Root Plasma applet & coordinator
 │       ├── CompactRepresentation.qml      # Panel view: active task chip + timer + play/pause
@@ -107,120 +89,145 @@ fatto-widget/
 │       ├── ActiveCardHero.qml             # Large timer, today's time, total card time, start/pause
 │       ├── RunningTimersBanner.qml        # Notification & list of other active running timers
 │       ├── CardListItem.qml               # Scheduled card row item
-│       ├── ConfigGeneral.qml              # Settings page UI (Server URL, API Key, Refresh Rate)
+│       ├── ConfigGeneral.qml              # Settings page UI (Server URL, Username, Password, Refresh Rate)
 │       └── js/
-│           ├── FattoMcpClient.js          # JSON-RPC 2.0 network client via XMLHttpRequest
-│           └── TimeUtils.js               # Formatting (HH:MM:SS) and date calculations
+│           ├── FattoRestClient.js         # HTTP REST client using QML XMLHttpRequest
+│           └── TimeUtils.js               # Formatting (HH:MM:SS) and date helpers
 ```
 
 ---
 
-## 4. Data Flow & State Management
+## 4. REST API Endpoints Specification
 
-### 4.1 Configuration State
-Managed via Plasma KConfigXT (`contents/config/main.xml`):
-* `serverUrl`: Base URL of FATTO (Default: `https://fatto.os3.services`).
-* `apiKey`: Bearer token (e.g., `fatto_...`).
-* `pollInterval`: Polling interval in seconds (Default: `60`, Range: 10 - 600).
+All endpoints communicate using standard JSON:
 
-### 4.2 Data Fetching & Syncing
-1. **Periodic Refresh**: Triggered every `pollInterval` seconds by a QML `Timer`.
-2. **Fetch Today's Schedule**:
-   - Calls `kanban_schedule_list` with `from_date = today` and `to_date = today` (in local `YYYY-MM-DD` format).
-   - Updates `scheduleModel` with the list of cards scheduled for today.
-   - Extracts current user ID from `id_user` in the schedule response (or active sessions).
-3. **Fetch Active Timers**:
-   - Calls `kanban_timer_mine` to retrieve all currently running sessions for the user.
-   - If the active card has an open session, sets `isActiveCardRunning = true`.
-   - Identifies any *other* cards with open sessions to populate `otherRunningTimers`.
-4. **Fetch Active Card Sessions**:
-   - For the selected card, calls `kanban_timer_sessions({ id_card: activeCard.id })`.
-   - **Today's Seconds**: Sum of `session.seconds` where `session.id_user === currentUserId` and session date is today.
-   - **User Total Seconds**: Sum of all `session.seconds` where `session.id_user === currentUserId`.
-   - **Global Total Seconds**: Total of all sessions regardless of user.
+| Operation | Method & URL | Parameters / Body | Response Payload |
+| --- | --- | --- | --- |
+| **Login** | `POST /api/user/login` | Body: `{ "username": "...", "password": "..." }` | `{ "ok": true, "data": { "token": "...", "user": { "id": "...", ... } } }` |
+| **Refresh Token** | `POST /api/user/token/refresh` | *(Bearer token in header)* | `{ "ok": true, "data": { "token": "..." } }` |
+| **Scheduled Tasks** | `GET /api/kanban/schedule/list` | Query: `?from_date=YYYY-MM-DD&to_date=YYYY-MM-DD` | `{ "ok": true, "data": [ KanbanScheduledCardItem, ... ] }` |
+| **My Active Timers** | `GET /api/kanban/timer/mine` | None | `{ "ok": true, "data": [ KanbanTimerMineItem, ... ] }` |
+| **Card Timer State** | `GET /api/kanban/timer/get` | Query: `?id_card=...` | `{ "ok": true, "data": { "timer": KanbanCardTimer, ... } }` |
+| **Card Timer Sessions** | `GET /api/kanban/timer/sessions` | Query: `?id_card=...` | `{ "ok": true, "data": [ KanbanTimerSessionItem, ... ] }` |
+| **Start Timer** | `POST /api/kanban/timer/start` | Body: `{ "id_card": "..." }` | `{ "ok": true, "data": { "timer": ..., "session": ... } }` |
+| **Pause Timer** | `POST /api/kanban/timer/pause` | Body: `{ "id_card": "..." }` | `{ "ok": true, "data": { "timer": ..., "session": ... } }` |
 
-### 4.3 Client-Side Smooth Clock Ticking
-* An internal 1-second QML `Timer` runs whenever at least one timer is active:
-  * If the selected card is currently running:
+---
+
+## 5. Data Flow & State Management
+
+### 5.1 Configuration & Authentication
+* **Settings**: User enters `serverUrl` (default: `https://fatto.os3.services`), `username`, `password`, and `pollInterval` (default: `60` seconds) in the widget settings.
+* **Authentication Flow**:
+  1. On plasmoid startup or when credentials change, `FattoRestClient.login(username, password)` calls `POST /api/user/login`.
+  2. On success, the JWT token and `user.id` are stored in memory.
+  3. If a 401 error is received during a request, `FattoRestClient` attempts a transparent login retry before surfacing an authentication error.
+
+### 5.2 Polling & Data Sync
+Every `pollInterval` seconds (QML `Timer`):
+1. **Fetch Today's Schedule**:
+   - Calls `GET /api/kanban/schedule/list?from_date=<today>&to_date=<today>`.
+   - Populates `scheduleModel` with today's scheduled tasks.
+2. **Fetch Active Timers**:
+   - Calls `GET /api/kanban/timer/mine`.
+   - Checks if the currently selected card has an open session (`isActiveCardRunning`).
+   - Collects all other running sessions into `otherRunningTimers`.
+3. **Fetch Active Card Sessions**:
+   - For the selected card, calls `GET /api/kanban/timer/sessions?id_card=<card.id>`.
+   - Computes **Today's Seconds**: Sum of duration of sessions where `id_user === currentUser.id` and `started` falls on today's date.
+   - Computes **User Total Seconds**: Sum of all sessions where `id_user === currentUser.id`.
+   - Computes **Card Global Total Seconds**: Sum of all sessions across all users.
+
+### 5.3 Client-Side Real-Time Ticking
+* An internal 1-second QML `Timer` runs while any timer is active:
+  * If the active card is running:
     * Increments `activeCardTodaySeconds += 1`
     * Increments `activeCardUserTotalSeconds += 1`
     * Increments `activeCardGlobalTotalSeconds += 1`
-  * Increments elapsed seconds on each item in `otherRunningTimers`.
-* Guarantees zero UI lag without flooding the backend API.
+  * Increments elapsed seconds on each session in `otherRunningTimers`.
+* Updates the UI instantly and smoothly without firing network requests.
 
-### 4.4 User Actions
-* **Start Timer**:
-  * Calls `kanban_timer_start({ id_card: activeCard.id })`.
-  * Optimistically marks `isActiveCardRunning = true`, starts the local 1s ticker, and appends to open sessions.
-* **Pause Timer**:
-  * Calls `kanban_timer_pause({ id_card: activeCard.id })`.
-  * Optimistically marks `isActiveCardRunning = false`.
+### 5.4 Actions & Independent Timers
+* **Start Active Card**:
+  - `POST /api/kanban/timer/start` with `{ id_card: activeCard.id }`.
+  - Sets `isActiveCardRunning = true` and starts local ticking.
+* **Pause Active Card**:
+  - `POST /api/kanban/timer/pause` with `{ id_card: activeCard.id }`.
+  - Sets `isActiveCardRunning = false`.
 * **Switch Active Card**:
-  * User clicks any card in the scheduled tasks list.
-  * Widget sets `activeCard = selectedCard`, immediately loads its sessions via `kanban_timer_sessions`, and updates the dual timer view.
-  * If the previous card's timer was running, it continues running in the background and immediately appears in the `otherRunningTimers` banner.
+  - Clicking any card in the list sets it as the active card.
+  - Fetches its session history immediately and updates the dual counter.
+  - Any timer previously running on another card remains running and is tracked in the `otherRunningTimers` banner.
 * **Quick Pause in Banner**:
-  * User clicks pause icon on any item in `otherRunningTimers` banner: sends `kanban_timer_pause({ id_card: otherCard.id })` directly.
+  - Clicking the pause button on an item in the banner invokes `POST /api/kanban/timer/pause` for that card.
 
 ---
 
-## 5. User Interface Specifications
+## 6. User Interface Specifications
 
-### 5.1 Panel Representation (`CompactRepresentation.qml`)
-* **Layout**: Horizontal row inside panel height.
-* **Elements**:
-  * Status indicator icon (Pulsing green dot if active timer running, subtle clock icon if paused).
-  * Active Card Code (e.g., `FATTO-25`) styled in bold monospace.
-  * Live ticking timer: `HH:MM:SS`.
-  * Quick Play / Pause button.
-  * Click on the rest of the widget toggles the full popup.
+### 6.1 Compact Representation (`CompactRepresentation.qml`)
+* Displayed when the widget is placed in a KDE panel (horizontal or vertical).
+* **Components**:
+  * Running status indicator (pulsing accent dot if running, subtle clock icon if idle/paused).
+  * Active card code (e.g., `FATTO-25`).
+  * Real-time timer display (`HH:MM:SS`).
+  * Inline quick play/pause button.
+  * Clicking outside the button opens the full popup representation.
 
-### 5.2 Desktop & Popup Representation (`FullRepresentation.qml`)
-* **Header**:
-  * Title: "FATTO Tasks"
-  * Today's Date formatted (e.g., `Thursday, 12 Nov`).
-  * Manual Refresh icon button (with spinning animation during sync).
-  * Settings icon button (opens Plasma config).
-* **Active Card Hero Section**:
-  * Card title & code badge with board prefix.
-  * Column/Status badge (e.g. `IN PROGRESS`).
-  * Primary Start / Pause Button: Large, colored according to state (Kirigami theme positive/accent for Start, warning/neutral for Pause).
-  * Dual Timer Display:
-    * **Today (Yours)**: Large, high contrast text `01:24:10`.
-    * **Total (Yours)**: Secondary text `Total: 04:52:30`.
-    * **Card Total (Global)**: Small badge `Card All: 12:15:00`.
-* **Other Running Timers Banner** (Visible only if other timers are running):
-  * Amber warning/info strip: *"1 other task running"*.
-  * Row for each running task: Code + Title + live timer + Quick Pause button.
-* **Scheduled Today List**:
-  * Scrollable `ListView`.
-  * Items display: Code, Title, Board Name, Status Column, and whether a timer is currently running.
-  * Visual highlight for the currently selected active card.
-  * Empty state if list is empty: *"No tasks scheduled for today."*
+### 6.2 Full Representation (`FullRepresentation.qml`)
+* Displayed directly on desktop or in panel popup.
+* **Components**:
+  1. **Header Bar**:
+     * App Title ("FATTO").
+     * Current Date ("Thursday, 12 Nov").
+     * Sync Status & Manual Refresh Button.
+     * Settings Shortcut Button.
+  2. **Active Card Hero**:
+     * Card Code badge & Title.
+     * Column status indicator.
+     * Prominent Start / Pause Button (Kirigami theme styled).
+     * **Personal-Focused Dual Time Counters**:
+       * **Today (Yours)**: Large, primary highlighted digits `01:45:20`.
+       * **Total (Yours)**: Secondary counter `Total: 06:12:00`.
+       * **Card Total (All Collaborators)**: Subtle badge `All: 14:30:15`.
+  3. **Other Running Timers Banner** (Displayed when concurrent timers exist):
+     * Info notification header: *"1 other task currently running"*.
+     * Compact row per running task: Code + Title + live timer + Quick Pause button.
+  4. **Scheduled Cards List**:
+     * Scrollable `ListView` showing today's tasks.
+     * Each item shows: Card Code, Title, Board Prefix, Status, and a running badge if active.
+     * Clicking an item selects it as the active card.
+     * Empty state if no tasks scheduled today.
+
+### 6.3 Settings Dialog (`ConfigGeneral.qml`)
+* Server URL input (default: `https://fatto.os3.services`).
+* Username input.
+* Password input (masked).
+* Polling Interval slider/spinbox (10 to 600 seconds, default 60s).
+* Connection Test / Status indicator.
 
 ---
 
-## 6. Error Handling & Edge Cases
+## 7. Error Handling & Edge Cases
 
 | Scenario | Handling |
 | --- | --- |
-| **Missing / Empty API Key** | Displays placeholder with *"Please configure your FATTO API Key"* and a direct button to open the settings dialog. |
-| **Invalid API Key (401)** | Highlights auth error in header status: *"Unauthorized: check your API key in settings"*. |
-| **Network Unavailable / 5xx** | Retains last known data, shows a subtle disconnected warning badge, retries on the next poll cycle. |
-| **Date Rollover at Midnight** | Date watcher triggers schedule refresh for the new date and resets the today counter. |
-| **Deleted / Archived Card** | If a scheduled card was deleted or archived, schedule list omits it or displays it disabled; if currently active, defaults back to the first available card. |
+| **Missing Credentials** | Empty state with message: *"Please enter your FATTO username and password in settings"* with button to open settings. |
+| **Invalid Credentials (403/401)** | Header error badge: *"Login failed: check username/password in settings"*. |
+| **Network Unavailable / Timeout** | Retains last known state, displays subtle offline warning, retries on next poll interval. |
+| **Token Expiry** | Automatic transparent re-login via `POST /api/user/login` when an API request encounters 401. |
+| **Midnight Rollover** | Automatic date monitor re-fetches the schedule when the calendar day changes. |
 
 ---
 
-## 7. Testing & Verification
+## 8. Verification & Testing
 
-1. **Backend MCP Verification**:
-   * Add automated test in `/data2/liwe/cf-liwe3/fatto/liwe3/modules/mcpkanban/tests/` verifying `kanban_schedule_list` works via JSON-RPC `tools/call`.
-   * Verify schema synchronization test passes.
-2. **Plasmoid Structure Verification**:
-   * Validate `metadata.json` conforms to KDE Plasma 6 package specifications.
-3. **Functional Plasmoid Test**:
-   * Run the plasmoid in isolation using `/usr/bin/plasmawindowed org.kde.fatto`.
-   * Test API key configuration, schedule retrieval, active card selection, start/pause timer toggling, and multi-timer banner.
-4. **Panel and Desktop Simulation**:
-   * Test compact representation and full representation rendering in `plasmawindowed`.
+1. **REST Client Verification**:
+   * Test curl requests against `https://fatto.os3.services/api/...` verifying `user/login`, `kanban/schedule/list`, `kanban/timer/*`.
+2. **Package Validation**:
+   * Verify `metadata.json` conforms to KDE Plasma 6 package specification.
+3. **Plasma Desktop Execution**:
+   * Run the widget with `/usr/bin/plasmawindowed org.kde.fatto`.
+   * Test login, schedule loading, card selection, timer start/pause, and other running timers banner.
+4. **Form Factor Testing**:
+   * Verify compact representation in panel mode and full representation in desktop/popup mode.
