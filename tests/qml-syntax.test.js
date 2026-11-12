@@ -277,7 +277,8 @@ test('FullRepresentation.qml has valid structure, bindings, and balanced braces'
   assert.match(full, /cardData:\s*modelData/);
   assert.match(full, /plasmoidRoot\.selectCard\(modelData\)/);
 
-  // Verify empty state
+  // Verify empty state and ScrollView visibility
+  assert.match(full, /visible:\s*plasmoidRoot\.scheduleList\.length\s*>\s*0/);
   assert.match(full, /plasmoidRoot\.scheduleList\.length\s*===\s*0/);
 
   // Verify balanced braces and parentheses
@@ -294,4 +295,65 @@ test('FullRepresentation.qml has valid structure, bindings, and balanced braces'
   }
   assert.strictEqual(braceCount, 0, 'Braces must be balanced in FullRepresentation.qml');
   assert.strictEqual(parenCount, 0, 'Parentheses must be balanced in FullRepresentation.qml');
+});
+
+test('main.qml exists and defines required root properties and timers', () => {
+  assert.ok(fs.existsSync('contents/ui/main.qml'), 'main.qml must exist');
+  const main = fs.readFileSync('contents/ui/main.qml', 'utf8');
+
+  assert.match(main, /PlasmoidItem/);
+  assert.match(main, /compactRepresentation/);
+  assert.match(main, /fullRepresentation/);
+  assert.match(main, /pollTimer/);
+  assert.match(main, /clockTickTimer/);
+});
+
+test('main.qml has valid structure, bindings, and balanced braces', () => {
+  assert.ok(fs.existsSync('contents/ui/main.qml'), 'main.qml must exist');
+  const main = fs.readFileSync('contents/ui/main.qml', 'utf8');
+
+  // Verify imports
+  assert.match(main, /import\s+QtQuick/);
+  assert.match(main, /import\s+org\.kde\.plasma\.plasmoid/);
+  assert.match(main, /import\s+org\.kde\.plasma\.core\s+as\s+PlasmaCore/);
+  assert.match(main, /import\s+"js\/FattoRestClient\.js"\s+as\s+FattoClient/);
+  assert.match(main, /import\s+"js\/TimeUtils\.js"\s+as\s+TimeUtils/);
+
+  // Verify representation selection
+  assert.match(main, /preferredRepresentation:\s*Plasmoid\.formFactor/);
+
+  // Verify core properties
+  assert.match(main, /property\s+string\s+authToken/);
+  assert.match(main, /property\s+var\s+currentUser/);
+  assert.match(main, /property\s+var\s+activeCard/);
+  assert.match(main, /property\s+bool\s+isActiveCardRunning/);
+  assert.match(main, /property\s+int\s+activeCardTodaySeconds/);
+  assert.match(main, /property\s+int\s+activeCardUserTotalSeconds/);
+  assert.match(main, /property\s+int\s+activeCardGlobalTotalSeconds/);
+  assert.match(main, /property\s+var\s+scheduleList/);
+  assert.match(main, /property\s+var\s+otherRunningTimers/);
+
+  // Verify core functions
+  assert.match(main, /function\s+ensureAuthenticated/);
+  assert.match(main, /function\s+refreshData/);
+  assert.match(main, /function\s+selectCard/);
+  assert.match(main, /function\s+updateRunningTimers/);
+  assert.match(main, /function\s+loadActiveCardSessions/);
+  assert.match(main, /function\s+toggleActiveCardTimer/);
+  assert.match(main, /function\s+pauseOtherCard/);
+
+  // Verify balanced braces and parentheses
+  let braceCount = 0;
+  let parenCount = 0;
+  for (let i = 0; i < main.length; i++) {
+    const char = main[i];
+    if (char === '{') braceCount++;
+    if (char === '}') braceCount--;
+    if (char === '(') parenCount++;
+    if (char === ')') parenCount--;
+    assert.ok(braceCount >= 0, 'Braces must not close before opening in main.qml');
+    assert.ok(parenCount >= 0, 'Parentheses must not close before opening in main.qml');
+  }
+  assert.strictEqual(braceCount, 0, 'Braces must be balanced in main.qml');
+  assert.strictEqual(parenCount, 0, 'Parentheses must be balanced in main.qml');
 });

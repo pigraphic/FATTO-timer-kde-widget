@@ -47,15 +47,15 @@ Item {
 
             QQC2.ToolButton {
                 icon.name: "view-refresh"
-                ToolTip.text: i18n("Refresh data")
-                ToolTip.visible: hovered
+                QQC2.ToolTip.text: i18n("Refresh data")
+                QQC2.ToolTip.visible: hovered
                 onClicked: plasmoidRoot.refreshData()
             }
 
             QQC2.ToolButton {
                 icon.name: "configure"
-                ToolTip.text: i18n("Configure FATTO widget")
-                ToolTip.visible: hovered
+                QQC2.ToolTip.text: i18n("Configure FATTO widget")
+                QQC2.ToolTip.visible: hovered
                 onClicked: Plasmoid.action("configure").trigger()
             }
         }
@@ -99,6 +99,7 @@ Item {
 
         // Cards list view
         QQC2.ScrollView {
+            visible: plasmoidRoot.scheduleList.length > 0
             Layout.fillWidth: true
             Layout.fillHeight: true
 
