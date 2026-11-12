@@ -66,7 +66,9 @@ function request(method, url, headers, body, callback) {
                         (responseJson.error.message || responseJson.error) :
                         ("HTTP " + xhr.status + (xhr.statusText ? ": " + xhr.statusText : ""));
                     if (typeof callback === "function") {
-                        callback(new Error(errorMsg), null, xhr.status);
+                        var errObj = new Error(errorMsg);
+                        errObj.status = xhr.status;
+                        callback(errObj, null, xhr.status);
                     }
                 }
             }
@@ -120,7 +122,9 @@ function request(method, url, headers, body, callback) {
                             (responseJson.error.message || responseJson.error) :
                             ("HTTP " + res.status + (res.statusText ? ": " + res.statusText : ""));
                         if (typeof callback === "function") {
-                            callback(new Error(errorMsg), null, res.status);
+                            var errObj = new Error(errorMsg);
+                            errObj.status = res.status;
+                            callback(errObj, null, res.status);
                         }
                     }
                 });

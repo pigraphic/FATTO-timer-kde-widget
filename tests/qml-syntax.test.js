@@ -334,6 +334,7 @@ test('main.qml has valid structure, bindings, and balanced braces', () => {
   assert.match(main, /property\s+var\s+otherRunningTimers/);
 
   // Verify core functions
+  assert.match(main, /function\s+handleApiError/);
   assert.match(main, /function\s+ensureAuthenticated/);
   assert.match(main, /function\s+refreshData/);
   assert.match(main, /function\s+selectCard/);
@@ -341,6 +342,15 @@ test('main.qml has valid structure, bindings, and balanced braces', () => {
   assert.match(main, /function\s+loadActiveCardSessions/);
   assert.match(main, /function\s+toggleActiveCardTimer/);
   assert.match(main, /function\s+pauseOtherCard/);
+
+  // Verify polish: immediate state update and metric zeroing in selectCard
+  assert.match(main, /isActiveCardRunning\s*=\s*isCardIdRunning\(card\.id_card\)/);
+  assert.match(main, /activeCardTodaySeconds\s*=\s*0/);
+  assert.match(main, /activeCardUserTotalSeconds\s*=\s*0/);
+  assert.match(main, /activeCardGlobalTotalSeconds\s*=\s*0/);
+
+  // Verify polish: clearing authToken on 401 error
+  assert.match(main, /authToken\s*=\s*""/);
 
   // Verify balanced braces and parentheses
   let braceCount = 0;

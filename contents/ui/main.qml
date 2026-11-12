@@ -33,6 +33,16 @@ PlasmoidItem {
     property var otherRunningTimers: []
 
     // Helper functions
+    function handleApiError(err, status) {
+        if (!err && !status) return;
+        var is401 = status === 401 ||
+                    (err && err.status === 401) ||
+                    (err && err.message && (err.message.indexOf("401") !== -1 || err.message.indexOf("Unauthorized") !== -1));
+        if (is401) {
+            authToken = "";
+        }
+    }
+
     function isCardIdRunning(cardId) {
         if (!cardId) return false;
         if (activeCard && activeCard.id_card === cardId && isActiveCardRunning) return true;
@@ -83,8 +93,10 @@ PlasmoidItem {
             var todayStr = TimeUtils.formatDateIso(new Date());
 
             // 1. Fetch today's schedule
-            FattoClient.getSchedule(sUrl, token, todayStr, function(sErr, items) {
-                if (!sErr && items) {
+            FattoClient.getSchedule(sUrl, token, todayStr, function(sErr, items, sStatus) {
+                if (sErr) {
+                    handleApiError(sErr, sStatus);
+                } else if (items) {
                     scheduleList = items;
                     // Auto-select first card if none active
                     if (!activeCard && items.length > 0) {
@@ -93,8 +105,10 @@ PlasmoidItem {
                 }
 
                 // 2. Fetch my active timers
-                FattoClient.getMyTimers(sUrl, token, function(tErr, myTimers) {
-                    if (!tErr && myTimers) {
+                FattoClient.getMyTimers(sUrl, token, function(tErr, myTimers, tStatus) {
+                    if (tErr) {
+                        handleApiError(tErr, tStatus);
+                    } else if (myTimers) {
                         updateRunningTimers(myTimers);
                     }
 
@@ -110,7 +124,19 @@ PlasmoidItem {
     }
 
     function selectCard(card) {
+        if (!card) {
+            activeCard = null;
+            isActiveCardRunning = false;
+            activeCardTodaySeconds = 0;
+            activeCardUserTotalSeconds = 0;
+            activeCardGlobalTotalSeconds = 0;
+            return;
+        }
+        isActiveCardRunning = isCardIdRunning(card.id_card);
         activeCard = card;
+        activeCardTodaySeconds = 0;
+        activeCardUserTotalSeconds = 0;
+        activeCardGlobalTotalSeconds = 0;
         loadActiveCardSessions();
     }
 
@@ -138,8 +164,12 @@ PlasmoidItem {
         if (!activeCard || !authToken) return;
 
         var sUrl = Plasmoid.configuration.serverUrl;
-        FattoClient.getCardSessions(sUrl, authToken, activeCard.id_card, function(err, sessions) {
-            if (err || !sessions) return;
+        FattoClient.getCardSessions(sUrl, authToken, activeCard.id_card, function(err, sessions, status) {
+            if (err) {
+                handleApiError(err, status);
+                return;
+            }
+            if (!sessions) return;
 
             var today = new Date();
             var myUserId = currentUser ? currentUser.id : "";
@@ -177,16 +207,20 @@ PlasmoidItem {
 
             if (isActiveCardRunning) {
                 // Pause
-                FattoClient.pauseTimer(sUrl, token, cardId, function(pErr) {
-                    if (!pErr) {
+                FattoClient.pauseTimer(sUrl, token, cardId, function(pErr, pData, pStatus) {
+                    if (pErr) {
+                        handleApiError(pErr, pStatus);
+                    } else {
                         isActiveCardRunning = false;
                         refreshData();
                     }
                 });
             } else {
                 // Start
-                FattoClient.startTimer(sUrl, token, cardId, function(sErr) {
-                    if (!sErr) {
+                FattoClient.startTimer(sUrl, token, cardId, function(sErr, sData, sStatus) {
+                    if (sErr) {
+                        handleApiError(sErr, sStatus);
+                    } else {
                         isActiveCardRunning = true;
                         refreshData();
                     }
@@ -199,8 +233,10 @@ PlasmoidItem {
         ensureAuthenticated(function(err, token) {
             if (err) return;
             var sUrl = Plasmoid.configuration.serverUrl;
-            FattoClient.pauseTimer(sUrl, token, cardId, function(pErr) {
-                if (!pErr) {
+            FattoClient.pauseTimer(sUrl, token, cardId, function(pErr, pData, pStatus) {
+                if (pErr) {
+                    handleApiError(pErr, pStatus);
+                } else {
                     refreshData();
                 }
             });
