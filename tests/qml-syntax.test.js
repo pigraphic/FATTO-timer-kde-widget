@@ -382,3 +382,24 @@ test('CardListItem.qml contains clipping and text elision for boundary containme
   assert.match(content, /clip:\s*true/);
   assert.match(content, /elide:\s*Text\.ElideRight/);
 });
+
+test('main.qml defines workspace management properties and functions', () => {
+  assert.ok(fs.existsSync('contents/ui/main.qml'), 'main.qml must exist');
+  const main = fs.readFileSync('contents/ui/main.qml', 'utf8');
+
+  // Verify properties
+  assert.match(main, /property\s+var\s+workspaceList:\s*\[\]/);
+  assert.match(main, /property\s+string\s+selectedWorkspaceId:\s*Plasmoid\.configuration\.selectedWorkspace/);
+
+  // Verify functions
+  assert.match(main, /function\s+selectWorkspace\s*\(\s*wsId\s*\)/);
+  assert.match(main, /function\s+loadWorkspaces\s*\(\s*token/);
+
+  // Verify workspace list contains All Workspaces default
+  assert.match(main, /\{\s*id:\s*"",\s*name:\s*i18n\("All Workspaces"\)\s*\}/);
+
+  // Verify workspace loading and board resolution logic
+  assert.match(main, /FattoClient\.getWorkspaces\(/);
+  assert.match(main, /FattoClient\.getBoards\(/);
+  assert.match(main, /loadWorkspaces\(/);
+});

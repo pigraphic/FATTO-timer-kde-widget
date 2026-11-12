@@ -33,6 +33,10 @@ PlasmoidItem {
     property var allRunningTimers: []
     property var otherRunningTimers: []
 
+    // Workspace state
+    property var workspaceList: []
+    property string selectedWorkspaceId: Plasmoid.configuration.selectedWorkspace || ""
+
     // Helper functions
     function handleApiError(err, status) {
         if (!err && !status) return;
@@ -108,6 +112,28 @@ PlasmoidItem {
         });
     }
 
+    function selectWorkspace(wsId) {
+        selectedWorkspaceId = wsId || "";
+        Plasmoid.configuration.selectedWorkspace = selectedWorkspaceId;
+        refreshData();
+    }
+
+    function loadWorkspaces(token, callback) {
+        var sUrl = Plasmoid.configuration.serverUrl;
+        FattoClient.getWorkspaces(sUrl, token, function(err, items, status) {
+            if (err) {
+                handleApiError(err, status);
+            } else if (Array.isArray(items)) {
+                var list = [{ id: "", name: i18n("All Workspaces") }];
+                for (var i = 0; i < items.length; i++) {
+                    list.push({ id: items[i].id, name: items[i].name });
+                }
+                workspaceList = list;
+            }
+            if (typeof callback === "function") callback(err, workspaceList);
+        });
+    }
+
     function refreshData() {
         if (isSyncing) return;
         isSyncing = true;
@@ -121,8 +147,10 @@ PlasmoidItem {
             var sUrl = Plasmoid.configuration.serverUrl;
             var todayStr = TimeUtils.formatDateIso(new Date());
 
-            // 1. Fetch today's schedule
-            FattoClient.getSchedule(sUrl, token, todayStr, function(sErr, items, sStatus) {
+            // Ensure workspace list is up to date
+            loadWorkspaces(token);
+
+            var onScheduleFetched = function(sErr, items, sStatus) {
                 if (sErr) {
                     statusMessage = i18n("Network error: failed to fetch schedule");
                     handleApiError(sErr, sStatus);
@@ -150,7 +178,27 @@ PlasmoidItem {
 
                     isSyncing = false;
                 });
-            });
+            };
+
+            if (selectedWorkspaceId !== "") {
+                FattoClient.getBoards(sUrl, token, selectedWorkspaceId, function(bErr, boards, bStatus) {
+                    if (bErr) {
+                        handleApiError(bErr, bStatus);
+                    }
+                    var boardIds = [];
+                    if (Array.isArray(boards)) {
+                        for (var i = 0; i < boards.length; i++) {
+                            var bId = boards[i].id || boards[i].id_board;
+                            if (bId) {
+                                boardIds.push(bId);
+                            }
+                        }
+                    }
+                    FattoClient.getSchedule(sUrl, token, todayStr, boardIds, onScheduleFetched);
+                });
+            } else {
+                FattoClient.getSchedule(sUrl, token, todayStr, null, onScheduleFetched);
+            }
         });
     }
 

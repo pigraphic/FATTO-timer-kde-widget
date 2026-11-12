@@ -23,6 +23,11 @@ test('contents/config/main.xml defines required KConfigXT entries', () => {
   assert.match(xml, /entry name="pollInterval"/);
 });
 
+test('contents/config/main.xml defines selectedWorkspace entry', () => {
+  const xml = fs.readFileSync('contents/config/main.xml', 'utf8');
+  assert.match(xml, /entry name="selectedWorkspace"/);
+});
+
 test('contents/config/config.qml registers General config category', () => {
   assert.ok(fs.existsSync('contents/config/config.qml'), 'config.qml must exist');
   const qml = fs.readFileSync('contents/config/config.qml', 'utf8');

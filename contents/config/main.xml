@@ -17,5 +17,8 @@
     <entry name="pollInterval" type="Int">
       <default>60</default>
     </entry>
+    <entry name="selectedWorkspace" type="String">
+      <default></default>
+    </entry>
   </group>
 </kcfg>
