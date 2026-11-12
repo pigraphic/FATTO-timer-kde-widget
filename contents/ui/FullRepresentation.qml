@@ -56,7 +56,10 @@ Item {
                 icon.name: "configure"
                 QQC2.ToolTip.text: i18n("Configure FATTO widget")
                 QQC2.ToolTip.visible: hovered
-                onClicked: Plasmoid.action("configure").trigger()
+                onClicked: {
+                    var act = Plasmoid.action("configure") || (typeof Plasmoid.internalAction === "function" ? Plasmoid.internalAction("configure") : null);
+                    if (act && typeof act.trigger === "function") act.trigger();
+                }
             }
         }
 

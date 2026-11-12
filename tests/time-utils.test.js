@@ -98,3 +98,22 @@ test('calculateSessionSeconds calculates correct elapsed seconds and handles NaN
   // Negative diff clamped to 0
   assert.equal(calculateSessionSeconds(end, start), 0);
 });
+
+test('calculateSessionSeconds handles ISO 8601 date strings and Date objects', () => {
+  const startIso = '2026-11-12T10:00:00.000Z';
+  const endIso = '2026-11-12T10:01:30.000Z'; // 90 seconds
+  assert.equal(calculateSessionSeconds(startIso, endIso), 90);
+
+  // Started as ISO string, ended as null with now as ISO string or timestamp
+  const nowIso = '2026-11-12T10:00:45.000Z';
+  assert.equal(calculateSessionSeconds(startIso, null, new Date(nowIso).getTime()), 45);
+
+  // Date objects
+  const startDate = new Date(startIso);
+  const endDate = new Date(endIso);
+  assert.equal(calculateSessionSeconds(startDate, endDate), 90);
+
+  // Mixed Date object and ISO string
+  assert.equal(calculateSessionSeconds(startDate, endIso), 90);
+  assert.equal(calculateSessionSeconds(startIso, endDate), 90);
+});

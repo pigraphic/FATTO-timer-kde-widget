@@ -269,6 +269,16 @@ test('normalizes baseUrl with multiple trailing slashes', async () => {
   assert.equal(res.data[0].code, 'FATTO-20');
 });
 
+test('getCleanBaseUrl prepends https:// when protocol is omitted and strips trailing slashes', () => {
+  assert.ok(Client.getCleanBaseUrl, 'getCleanBaseUrl function must be exported');
+  assert.equal(Client.getCleanBaseUrl('fatto.os3.services'), 'https://fatto.os3.services');
+  assert.equal(Client.getCleanBaseUrl('fatto.os3.services/'), 'https://fatto.os3.services');
+  assert.equal(Client.getCleanBaseUrl('http://custom.domain:8080///'), 'http://custom.domain:8080');
+  assert.equal(Client.getCleanBaseUrl('https://custom.domain///'), 'https://custom.domain');
+  assert.equal(Client.getCleanBaseUrl(''), '');
+  assert.equal(Client.getCleanBaseUrl(null), '');
+});
+
 test('handles 401 Unauthorized properly', async () => {
   assert.ok(Client, 'FattoRestClient module must be loaded');
   const res = await new Promise(resolve => {

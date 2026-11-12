@@ -77,14 +77,24 @@ function isSameDay(d1, d2) {
 
 /**
  * Calculates duration of a session in seconds
- * @param {number} started Epoch ms
- * @param {number|null} [ended] Epoch ms
- * @param {number} [now] Epoch ms
+ * @param {number|string|Date} started Epoch ms, ISO date string, or Date
+ * @param {number|string|Date|null} [ended] Epoch ms, ISO date string, or Date
+ * @param {number|string|Date} [now] Epoch ms, ISO date string, or Date
  * @returns {number}
  */
 function calculateSessionSeconds(started, ended, now) {
-    var startNum = Number(started);
-    var endNum = (ended !== null && ended !== undefined) ? Number(ended) : (now !== undefined && now !== null ? Number(now) : Date.now());
+    var toEpoch = function(val, fallback) {
+        if (val === null || val === undefined) return fallback;
+        if (val instanceof Date) return val.getTime();
+        if (typeof val === "string" && isNaN(Number(val))) {
+            var parsed = new Date(val).getTime();
+            return isNaN(parsed) ? fallback : parsed;
+        }
+        var num = Number(val);
+        return isNaN(num) ? fallback : num;
+    };
+    var startNum = toEpoch(started, NaN);
+    var endNum = toEpoch(ended, now !== undefined && now !== null ? Number(now) : Date.now());
     var diff = (endNum - startNum) / 1000;
     return isNaN(diff) || diff < 0 ? 0 : Math.floor(diff);
 }

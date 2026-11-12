@@ -30,6 +30,7 @@ PlasmoidItem {
 
     // Schedule and other running timers
     property var scheduleList: []
+    property var allRunningTimers: []
     property var otherRunningTimers: []
 
     // Helper functions
@@ -46,10 +47,38 @@ PlasmoidItem {
     function isCardIdRunning(cardId) {
         if (!cardId) return false;
         if (activeCard && activeCard.id_card === cardId && isActiveCardRunning) return true;
-        for (var i = 0; i < otherRunningTimers.length; i++) {
-            if (otherRunningTimers[i].id_card === cardId) return true;
+        for (var i = 0; i < allRunningTimers.length; i++) {
+            if (allRunningTimers[i].id_card === cardId) return true;
+        }
+        for (var j = 0; j < otherRunningTimers.length; j++) {
+            if (otherRunningTimers[j].id_card === cardId) return true;
         }
         return false;
+    }
+
+    function partitionRunningTimers(newActiveCardId) {
+        var targetId = newActiveCardId !== undefined ? newActiveCardId : (activeCard ? activeCard.id_card : "");
+        var pool = allRunningTimers.slice();
+        if (pool.length === 0 && otherRunningTimers.length > 0) {
+            pool = otherRunningTimers.slice();
+        }
+
+        var others = [];
+        var activeRunning = false;
+        var now = Date.now();
+
+        for (var i = 0; i < pool.length; i++) {
+            var item = pool[i];
+            item.elapsedSeconds = TimeUtils.calculateSessionSeconds(item.started, null, now);
+            if (targetId && item.id_card === targetId) {
+                activeRunning = true;
+            } else {
+                others.push(item);
+            }
+        }
+
+        isActiveCardRunning = activeRunning;
+        otherRunningTimers = others;
     }
 
     function ensureAuthenticated(callback) {
@@ -73,7 +102,7 @@ PlasmoidItem {
                 return callback(err);
             }
             authToken = data.token;
-            currentUser = data.user;
+            currentUser = data.user || data;
             statusMessage = "";
             callback(null, authToken);
         });
@@ -95,8 +124,10 @@ PlasmoidItem {
             // 1. Fetch today's schedule
             FattoClient.getSchedule(sUrl, token, todayStr, function(sErr, items, sStatus) {
                 if (sErr) {
+                    statusMessage = i18n("Network error: failed to fetch schedule");
                     handleApiError(sErr, sStatus);
                 } else if (items) {
+                    statusMessage = "";
                     scheduleList = items;
                     // Auto-select first card if none active
                     if (!activeCard && items.length > 0) {
@@ -130,10 +161,33 @@ PlasmoidItem {
             activeCardTodaySeconds = 0;
             activeCardUserTotalSeconds = 0;
             activeCardGlobalTotalSeconds = 0;
+            partitionRunningTimers("");
             return;
         }
-        isActiveCardRunning = isCardIdRunning(card.id_card);
+
+        // If current activeCard was running, ensure it is recorded in allRunningTimers before switching
+        if (activeCard && isActiveCardRunning) {
+            var found = false;
+            for (var i = 0; i < allRunningTimers.length; i++) {
+                if (allRunningTimers[i].id_card === activeCard.id_card) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                var copy = allRunningTimers.slice();
+                copy.push({
+                    id_card: activeCard.id_card,
+                    card_title: activeCard.card_title || "",
+                    started: Date.now()
+                });
+                allRunningTimers = copy;
+            }
+        }
+
         activeCard = card;
+        isActiveCardRunning = isCardIdRunning(card.id_card);
+        partitionRunningTimers(card.id_card);
         activeCardTodaySeconds = 0;
         activeCardUserTotalSeconds = 0;
         activeCardGlobalTotalSeconds = 0;
@@ -141,30 +195,17 @@ PlasmoidItem {
     }
 
     function updateRunningTimers(myTimers) {
-        var activeId = activeCard ? activeCard.id_card : "";
-        var others = [];
-        var activeRunning = false;
-
-        var now = Date.now();
-        for (var i = 0; i < myTimers.length; i++) {
-            var item = myTimers[i];
-            item.elapsedSeconds = TimeUtils.calculateSessionSeconds(item.started, null, now);
-            if (item.id_card === activeId) {
-                activeRunning = true;
-            } else {
-                others.push(item);
-            }
-        }
-
-        isActiveCardRunning = activeRunning;
-        otherRunningTimers = others;
+        allRunningTimers = myTimers || [];
+        partitionRunningTimers(activeCard ? activeCard.id_card : "");
     }
 
     function loadActiveCardSessions() {
         if (!activeCard || !authToken) return;
 
         var sUrl = Plasmoid.configuration.serverUrl;
-        FattoClient.getCardSessions(sUrl, authToken, activeCard.id_card, function(err, sessions, status) {
+        var targetCardId = activeCard.id_card;
+        FattoClient.getCardSessions(sUrl, authToken, targetCardId, function(err, sessions, status) {
+            if (!activeCard || activeCard.id_card !== targetCardId) return;
             if (err) {
                 handleApiError(err, status);
                 return;
@@ -172,7 +213,7 @@ PlasmoidItem {
             if (!sessions) return;
 
             var today = new Date();
-            var myUserId = currentUser ? currentUser.id : "";
+            var myUserId = currentUser ? (currentUser.id || currentUser.id_user) : "";
             var todaySecs = 0;
             var userTotalSecs = 0;
             var globalTotalSecs = 0;
@@ -212,6 +253,8 @@ PlasmoidItem {
                         handleApiError(pErr, pStatus);
                     } else {
                         isActiveCardRunning = false;
+                        allRunningTimers = allRunningTimers.filter(function(t) { return t.id_card !== cardId; });
+                        partitionRunningTimers(cardId);
                         refreshData();
                     }
                 });
@@ -222,6 +265,23 @@ PlasmoidItem {
                         handleApiError(sErr, sStatus);
                     } else {
                         isActiveCardRunning = true;
+                        var exists = false;
+                        for (var i = 0; i < allRunningTimers.length; i++) {
+                            if (allRunningTimers[i].id_card === cardId) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            var copy = allRunningTimers.slice();
+                            copy.push({
+                                id_card: cardId,
+                                card_title: activeCard ? (activeCard.card_title || "") : "",
+                                started: Date.now()
+                            });
+                            allRunningTimers = copy;
+                        }
+                        partitionRunningTimers(cardId);
                         refreshData();
                     }
                 });
@@ -237,6 +297,8 @@ PlasmoidItem {
                 if (pErr) {
                     handleApiError(pErr, pStatus);
                 } else {
+                    allRunningTimers = allRunningTimers.filter(function(t) { return t.id_card !== cardId; });
+                    partitionRunningTimers();
                     refreshData();
                 }
             });

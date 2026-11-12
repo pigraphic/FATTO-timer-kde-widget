@@ -257,7 +257,7 @@ test('FullRepresentation.qml has valid structure, bindings, and balanced braces'
 
   // Verify header actions
   assert.match(full, /plasmoidRoot\.refreshData\(\)/);
-  assert.match(full, /Plasmoid\.action\("configure"\)\.trigger\(\)/);
+  assert.match(full, /Plasmoid\.action\("configure"\)/);
 
   // Verify ActiveCardHero component usage
   assert.match(full, /ActiveCardHero\s*\{/);

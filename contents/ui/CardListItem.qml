@@ -58,7 +58,7 @@ Rectangle {
             width: codeLabel.implicitWidth + 12
             radius: 4
             color: root.isSelected ?
-                   Qt.rgba(255, 255, 255, 0.25) :
+                   Qt.rgba(1.0, 1.0, 1.0, 0.25) :
                    Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.1)
 
             QQC2.Label {

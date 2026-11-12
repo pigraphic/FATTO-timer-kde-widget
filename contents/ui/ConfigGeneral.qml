@@ -64,7 +64,8 @@ KCM.SimpleKCM {
                             statusLabel.text = i18n("Error: %1", err.message);
                             statusLabel.color = Kirigami.Theme.negativeTextColor;
                         } else {
-                            statusLabel.text = i18n("Success! Connected as %1", data.user.username || data.user.id);
+                            var displayName = (data.user && (data.user.username || data.user.id)) || data.username || data.id || "";
+                            statusLabel.text = i18n("Success! Connected as %1", displayName);
                             statusLabel.color = Kirigami.Theme.positiveTextColor;
                         }
                     });

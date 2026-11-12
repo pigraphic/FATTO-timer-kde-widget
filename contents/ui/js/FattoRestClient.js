@@ -8,6 +8,10 @@ function getCleanBaseUrl(url) {
     while (trimmed.endsWith("/")) {
         trimmed = trimmed.slice(0, -1);
     }
+    if (!trimmed) return "";
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+        trimmed = "https://" + trimmed;
+    }
     return trimmed;
 }
 
@@ -184,6 +188,7 @@ function pauseTimer(baseUrl, token, cardId, callback) {
 
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
+        getCleanBaseUrl: getCleanBaseUrl,
         login: login,
         refreshToken: refreshToken,
         getSchedule: getSchedule,
