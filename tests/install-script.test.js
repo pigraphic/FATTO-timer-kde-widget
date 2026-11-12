@@ -34,4 +34,6 @@ test('README.md exists and contains features, installation, configuration, and p
   assert.match(readme, /##\s+Testing & Preview/);
   assert.match(readme, /plasmawindowed\s+org\.kde\.fatto/);
   assert.match(readme, /node\s+--test\s+tests\/\*\.test\.js/);
+  assert.match(readme, /Workspace Filtering/i);
+  assert.match(readme, /Responsive Layout/i);
 });
