@@ -1,0 +1,18 @@
+{
+  "KPackageStructure": "Plasma/Applet",
+  "KPlugin": {
+    "Authors": [
+      {
+        "Name": "FATTO Team"
+      }
+    ],
+    "Category": "Utilities",
+    "Description": "Daily scheduled tasks and time tracking widget for FATTO",
+    "Icon": "chronometer",
+    "Id": "org.kde.fatto",
+    "Name": "FATTO Tasks & Timer",
+    "Version": "1.0.0",
+    "Website": "https://fatto.os3.services"
+  },
+  "X-Plasma-API-Minimum-Version": "6.0"
+}
