@@ -77,7 +77,45 @@ test.before((_, done) => {
         }));
       }
 
+      if (req.url.startsWith('/api/kanban/workspace/list') && req.method === 'GET') {
+        res.writeHead(200);
+        return res.end(JSON.stringify({
+          ok: true,
+          data: [
+            { id: 'ws_1', name: 'Default Workspace' },
+            { id: 'ws_2', name: 'Projects' }
+          ]
+        }));
+      }
+
+      if (req.url.startsWith('/api/kanban/board/list') && req.method === 'GET') {
+        const urlObj = new URL(req.url, 'http://127.0.0.1');
+        const idWorkspace = urlObj.searchParams.get('id_workspace');
+        if (idWorkspace === 'ws_1') {
+          res.writeHead(200);
+          return res.end(JSON.stringify({
+            ok: true,
+            data: [
+              { id: 'b_1', name: 'Board 1', id_workspace: 'ws_1' },
+              { id: 'b_2', name: 'Board 2', id_workspace: 'ws_1' }
+            ]
+          }));
+        }
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, data: [] }));
+      }
+
       if (req.url.startsWith('/api/kanban/schedule/list') && req.method === 'GET') {
+        const urlObj = new URL(req.url, 'http://127.0.0.1');
+        const idBoards = urlObj.searchParams.get('id_boards');
+        if (idBoards) {
+          const boards = idBoards.split(',');
+          res.writeHead(200);
+          return res.end(JSON.stringify({
+            ok: true,
+            data: [{ id: 'sch_filtered', id_card: 'c_1', card_code: 'FATTO-10', card_title: 'Task 1', id_board: boards[0], id_boards: idBoards }]
+          }));
+        }
         res.writeHead(200);
         return res.end(JSON.stringify({
           ok: true,
@@ -350,4 +388,33 @@ test('works with XMLHttpRequest when available (QML runtime simulation)', async 
   assert.equal(res.err, null);
   assert.equal(res.status, 200);
   assert.equal(res.data.token, 'jwt.mock.token');
+});
+
+test('getWorkspaces fetches visible workspaces list', async () => {
+  const res = await new Promise(resolve => {
+    Client.getWorkspaces(baseUrl, 'jwt.mock.token', (err, items) => resolve({ err, items }));
+  });
+  assert.equal(res.err, null);
+  assert.ok(Array.isArray(res.items));
+  assert.equal(res.items.length, 2);
+  assert.equal(res.items[0].id, 'ws_1');
+  assert.equal(res.items[0].name, 'Default Workspace');
+});
+
+test('getBoards fetches boards for a workspace', async () => {
+  const res = await new Promise(resolve => {
+    Client.getBoards(baseUrl, 'jwt.mock.token', 'ws_1', (err, items) => resolve({ err, items }));
+  });
+  assert.equal(res.err, null);
+  assert.ok(Array.isArray(res.items));
+  assert.equal(res.items.length, 2);
+  assert.equal(res.items[0].id, 'b_1');
+});
+
+test('getSchedule supports boardIds filtering', async () => {
+  const res = await new Promise(resolve => {
+    Client.getSchedule(baseUrl, 'jwt.mock.token', '2026-11-12', ['b_1', 'b_2'], (err, items) => resolve({ err, items }));
+  });
+  assert.equal(res.err, null);
+  assert.ok(Array.isArray(res.items));
 });

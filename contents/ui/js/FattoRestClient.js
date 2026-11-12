@@ -155,10 +155,36 @@ function refreshToken(baseUrl, token, callback) {
     request("POST", url, { "Authorization": "Bearer " + token }, null, callback);
 }
 
-function getSchedule(baseUrl, token, dateStr, callback) {
+function getWorkspaces(baseUrl, token, callback) {
+    var url = getCleanBaseUrl(baseUrl) + "/api/kanban/workspace/list";
+    request("GET", url, { "Authorization": "Bearer " + token }, null, callback);
+}
+
+function getBoards(baseUrl, token, workspaceId, callback) {
+    var url = getCleanBaseUrl(baseUrl) + "/api/kanban/board/list";
+    if (workspaceId) {
+        url += "?id_workspace=" + encodeURIComponent(workspaceId);
+    }
+    request("GET", url, { "Authorization": "Bearer " + token }, null, callback);
+}
+
+function getSchedule(baseUrl, token, dateStr, boardIds, callback) {
+    // Support optional boardIds parameter
+    var cb = typeof boardIds === "function" ? boardIds : callback;
+    var bIds = typeof boardIds === "function" ? null : boardIds;
+
     var url = getCleanBaseUrl(baseUrl) + "/api/kanban/schedule/list?from_date=" +
               encodeURIComponent(dateStr) + "&to_date=" + encodeURIComponent(dateStr);
-    request("GET", url, { "Authorization": "Bearer " + token }, null, callback);
+
+    if (bIds) {
+        if (Array.isArray(bIds) && bIds.length > 0) {
+            url += "&id_boards=" + encodeURIComponent(bIds.join(","));
+        } else if (typeof bIds === "string" && bIds.trim().length > 0) {
+            url += "&id_boards=" + encodeURIComponent(bIds.trim());
+        }
+    }
+
+    request("GET", url, { "Authorization": "Bearer " + token }, null, cb);
 }
 
 function getMyTimers(baseUrl, token, callback) {
@@ -191,6 +217,8 @@ if (typeof module !== "undefined" && module.exports) {
         getCleanBaseUrl: getCleanBaseUrl,
         login: login,
         refreshToken: refreshToken,
+        getWorkspaces: getWorkspaces,
+        getBoards: getBoards,
         getSchedule: getSchedule,
         getMyTimers: getMyTimers,
         getCardTimer: getCardTimer,
