@@ -188,3 +188,110 @@ test('RunningTimersBanner.qml has valid structure, bindings, and balanced braces
   assert.strictEqual(braceCount, 0, 'Braces must be balanced in RunningTimersBanner.qml');
   assert.strictEqual(parenCount, 0, 'Parentheses must be balanced in RunningTimersBanner.qml');
 });
+
+test('CompactRepresentation.qml and FullRepresentation.qml exist', () => {
+  assert.ok(fs.existsSync('contents/ui/CompactRepresentation.qml'), 'CompactRepresentation.qml must exist');
+  assert.ok(fs.existsSync('contents/ui/FullRepresentation.qml'), 'FullRepresentation.qml must exist');
+
+  const compact = fs.readFileSync('contents/ui/CompactRepresentation.qml', 'utf8');
+  assert.match(compact, /MouseArea/);
+
+  const full = fs.readFileSync('contents/ui/FullRepresentation.qml', 'utf8');
+  assert.match(full, /ActiveCardHero/);
+  assert.match(full, /RunningTimersBanner/);
+  assert.match(full, /ListView/);
+});
+
+test('CompactRepresentation.qml has valid structure, bindings, and balanced braces', () => {
+  assert.ok(fs.existsSync('contents/ui/CompactRepresentation.qml'), 'CompactRepresentation.qml must exist');
+  const compact = fs.readFileSync('contents/ui/CompactRepresentation.qml', 'utf8');
+
+  // Verify imports
+  assert.match(compact, /import\s+QtQuick/);
+  assert.match(compact, /import\s+QtQuick\.Layouts/);
+  assert.match(compact, /import\s+QtQuick\.Controls\s+as\s+QQC2/);
+  assert.match(compact, /import\s+org\.kde\.kirigami\s+as\s+Kirigami/);
+  assert.match(compact, /import\s+org\.kde\.plasma\.plasmoid/);
+  assert.match(compact, /import\s+"js\/TimeUtils\.js"\s+as\s+TimeUtils/);
+
+  // Verify Plasmoid.expanded toggle
+  assert.match(compact, /Plasmoid\.expanded\s*=\s*!Plasmoid\.expanded/);
+
+  // Verify pulsing animation
+  assert.match(compact, /SequentialAnimation\s+on\s+opacity/);
+  assert.match(compact, /plasmoidRoot\.isActiveCardRunning/);
+
+  // Verify time formatting
+  assert.match(compact, /TimeUtils\.formatSeconds\(plasmoidRoot\.activeCardTodaySeconds\)/);
+
+  // Verify toggle button
+  assert.match(compact, /plasmoidRoot\.toggleActiveCardTimer\(\)/);
+
+  // Verify balanced braces and parentheses
+  let braceCount = 0;
+  let parenCount = 0;
+  for (let i = 0; i < compact.length; i++) {
+    const char = compact[i];
+    if (char === '{') braceCount++;
+    if (char === '}') braceCount--;
+    if (char === '(') parenCount++;
+    if (char === ')') parenCount--;
+    assert.ok(braceCount >= 0, 'Braces must not close before opening in CompactRepresentation.qml');
+    assert.ok(parenCount >= 0, 'Parentheses must not close before opening in CompactRepresentation.qml');
+  }
+  assert.strictEqual(braceCount, 0, 'Braces must be balanced in CompactRepresentation.qml');
+  assert.strictEqual(parenCount, 0, 'Parentheses must be balanced in CompactRepresentation.qml');
+});
+
+test('FullRepresentation.qml has valid structure, bindings, and balanced braces', () => {
+  assert.ok(fs.existsSync('contents/ui/FullRepresentation.qml'), 'FullRepresentation.qml must exist');
+  const full = fs.readFileSync('contents/ui/FullRepresentation.qml', 'utf8');
+
+  // Verify imports
+  assert.match(full, /import\s+QtQuick/);
+  assert.match(full, /import\s+QtQuick\.Layouts/);
+  assert.match(full, /import\s+QtQuick\.Controls\s+as\s+QQC2/);
+  assert.match(full, /import\s+org\.kde\.kirigami\s+as\s+Kirigami/);
+  assert.match(full, /import\s+org\.kde\.plasma\.plasmoid/);
+  assert.match(full, /import\s+"js\/TimeUtils\.js"\s+as\s+TimeUtils/);
+
+  // Verify header actions
+  assert.match(full, /plasmoidRoot\.refreshData\(\)/);
+  assert.match(full, /Plasmoid\.action\("configure"\)\.trigger\(\)/);
+
+  // Verify ActiveCardHero component usage
+  assert.match(full, /ActiveCardHero\s*\{/);
+  assert.match(full, /activeCard:\s*plasmoidRoot\.activeCard/);
+  assert.match(full, /isRunning:\s*plasmoidRoot\.isActiveCardRunning/);
+  assert.match(full, /todaySeconds:\s*plasmoidRoot\.activeCardTodaySeconds/);
+  assert.match(full, /onToggleTimer:\s*plasmoidRoot\.toggleActiveCardTimer\(\)/);
+
+  // Verify RunningTimersBanner component usage
+  assert.match(full, /RunningTimersBanner\s*\{/);
+  assert.match(full, /runningTimers:\s*plasmoidRoot\.otherRunningTimers/);
+  assert.match(full, /plasmoidRoot\.pauseOtherCard\(cardId\)/);
+
+  // Verify ListView and CardListItem delegate
+  assert.match(full, /ListView\s*\{/);
+  assert.match(full, /delegate:\s*CardListItem\s*\{/);
+  assert.match(full, /cardData:\s*modelData/);
+  assert.match(full, /plasmoidRoot\.selectCard\(modelData\)/);
+
+  // Verify empty state
+  assert.match(full, /plasmoidRoot\.scheduleList\.length\s*===\s*0/);
+
+  // Verify balanced braces and parentheses
+  let braceCount = 0;
+  let parenCount = 0;
+  for (let i = 0; i < full.length; i++) {
+    const char = full[i];
+    if (char === '{') braceCount++;
+    if (char === '}') braceCount--;
+    if (char === '(') parenCount++;
+    if (char === ')') parenCount--;
+    assert.ok(braceCount >= 0, 'Braces must not close before opening in FullRepresentation.qml');
+    assert.ok(parenCount >= 0, 'Parentheses must not close before opening in FullRepresentation.qml');
+  }
+  assert.strictEqual(braceCount, 0, 'Braces must be balanced in FullRepresentation.qml');
+  assert.strictEqual(parenCount, 0, 'Parentheses must be balanced in FullRepresentation.qml');
+});

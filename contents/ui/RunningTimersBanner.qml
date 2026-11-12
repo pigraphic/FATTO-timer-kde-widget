@@ -12,6 +12,7 @@ Rectangle {
 
     visible: runningTimers && runningTimers.length > 0
     height: visible ? columnLayout.implicitHeight + (Kirigami.Units.smallSpacing * 2) : 0
+    implicitHeight: height
     radius: Kirigami.Units.smallSpacing
     color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.neutralTextColor, 0.15)
     border.color: Kirigami.Theme.neutralTextColor
