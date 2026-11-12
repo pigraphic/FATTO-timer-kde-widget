@@ -26,6 +26,7 @@ test('contents/config/main.xml defines required KConfigXT entries', () => {
 test('contents/config/main.xml defines selectedWorkspace entry', () => {
   const xml = fs.readFileSync('contents/config/main.xml', 'utf8');
   assert.match(xml, /entry name="selectedWorkspace"/);
+  assert.match(xml, /entry name="domain"/);
 });
 
 test('contents/config/config.qml registers General config category', () => {

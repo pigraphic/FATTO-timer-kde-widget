@@ -145,9 +145,17 @@ function request(method, url, headers, body, callback) {
     }
 }
 
-function login(baseUrl, username, password, callback) {
+function login(baseUrl, username, password, domain, callback) {
+    if (typeof domain === "function") {
+        callback = domain;
+        domain = null;
+    }
     var url = getCleanBaseUrl(baseUrl) + "/api/user/login";
-    request("POST", url, null, { username: username, password: password }, callback);
+    var payload = { username: username, password: password };
+    if (domain) {
+        payload.domain = domain;
+    }
+    request("POST", url, null, payload, callback);
 }
 
 function refreshToken(baseUrl, token, callback) {

@@ -53,6 +53,20 @@ test.before((_, done) => {
 
       if (req.url === '/api/user/login' && req.method === 'POST') {
         const parsed = JSON.parse(body || '{}');
+        if (parsed.username === 'multidomain') {
+          if (parsed.domain === 'pig') {
+            res.writeHead(200);
+            return res.end(JSON.stringify({
+              ok: true,
+              data: { token: 'jwt.mock.token.pig', domain: 'pig', user: { id: 'usr_pig', username: 'multidomain' } }
+            }));
+          }
+          res.writeHead(200);
+          return res.end(JSON.stringify({
+            ok: true,
+            data: { requires_domain_choice: true, domains: ['fsoft', 'pig'] }
+          }));
+        }
         if (parsed.username === 'testuser' && parsed.password === 'secret') {
           res.writeHead(200);
           return res.end(JSON.stringify({
@@ -215,6 +229,31 @@ test('login succeeds with correct credentials and fails on invalid', async () =>
   assert.ok(failure.err !== null);
   assert.equal(failure.status, 403);
   assert.match(failure.err.message, /Invalid credentials/);
+});
+
+test('login handles domain parameter and requires_domain_choice', async () => {
+  assert.ok(Client, 'FattoRestClient module must be loaded');
+  // First call without domain returns requires_domain_choice
+  const domainChoiceRes = await new Promise(resolve => {
+    Client.login(baseUrl, 'multidomain', 'secret', (err, data, status) => {
+      resolve({ err, data, status });
+    });
+  });
+  assert.equal(domainChoiceRes.err, null);
+  assert.equal(domainChoiceRes.status, 200);
+  assert.equal(domainChoiceRes.data.requires_domain_choice, true);
+  assert.deepEqual(domainChoiceRes.data.domains, ['fsoft', 'pig']);
+
+  // Second call with explicit domain returns token
+  const domainSuccess = await new Promise(resolve => {
+    Client.login(baseUrl, 'multidomain', 'secret', 'pig', (err, data, status) => {
+      resolve({ err, data, status });
+    });
+  });
+  assert.equal(domainSuccess.err, null);
+  assert.equal(domainSuccess.status, 200);
+  assert.equal(domainSuccess.data.token, 'jwt.mock.token.pig');
+  assert.equal(domainSuccess.data.domain, 'pig');
 });
 
 test('refreshToken refreshes authentication token', async () => {

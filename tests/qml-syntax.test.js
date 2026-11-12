@@ -9,6 +9,8 @@ test('ConfigGeneral.qml exists and contains form fields for settings', () => {
   assert.match(content, /cfg_serverUrl/);
   assert.match(content, /cfg_username/);
   assert.match(content, /cfg_password/);
+  assert.match(content, /cfg_domain/);
+  assert.match(content, /cfg_selectedWorkspace/);
   assert.match(content, /cfg_pollInterval/);
 });
 

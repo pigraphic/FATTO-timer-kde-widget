@@ -14,6 +14,9 @@
     <entry name="password" type="String">
       <default></default>
     </entry>
+    <entry name="domain" type="String">
+      <default></default>
+    </entry>
     <entry name="pollInterval" type="Int">
       <default>60</default>
     </entry>

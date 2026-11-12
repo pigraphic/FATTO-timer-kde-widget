@@ -93,6 +93,7 @@ PlasmoidItem {
         var sUrl = Plasmoid.configuration.serverUrl;
         var uName = Plasmoid.configuration.username;
         var pWord = Plasmoid.configuration.password;
+        var dom = (Plasmoid.configuration.domain || "").trim();
 
         if (!uName || !pWord) {
             statusMessage = i18n("Please configure username and password in settings.");
@@ -100,16 +101,37 @@ PlasmoidItem {
         }
 
         statusMessage = i18n("Authenticating...");
-        FattoClient.login(sUrl, uName, pWord, function(err, data) {
+
+        function handleLoginResult(err, data) {
             if (err) {
                 statusMessage = i18n("Login failed: %1", err.message);
                 return callback(err);
             }
-            authToken = data.token;
+            if (data && data.requires_domain_choice) {
+                var domains = data.domains || [];
+                var chosenDomain = dom;
+                if (!chosenDomain || domains.indexOf(chosenDomain) === -1) {
+                    chosenDomain = domains.indexOf("pig") !== -1 ? "pig" : (domains[0] || "");
+                    if (chosenDomain) {
+                        Plasmoid.configuration.domain = chosenDomain;
+                    }
+                }
+                if (chosenDomain) {
+                    FattoClient.login(sUrl, uName, pWord, chosenDomain, handleLoginResult);
+                    return;
+                }
+            }
+            if (!data || !data.token) {
+                statusMessage = i18n("Login failed: No authentication token received");
+                return callback(new Error("No token received"));
+            }
+            authToken = data.token || "";
             currentUser = data.user || data;
             statusMessage = "";
             callback(null, authToken);
-        });
+        }
+
+        FattoClient.login(sUrl, uName, pWord, dom, handleLoginResult);
     }
 
     function selectWorkspace(wsId) {
