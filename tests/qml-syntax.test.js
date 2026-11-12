@@ -390,10 +390,13 @@ test('main.qml defines workspace management properties and functions', () => {
   const main = fs.readFileSync('contents/ui/main.qml', 'utf8');
 
   // Verify properties
+  assert.match(main, /property\s+var\s+domainList:\s*\[\]/);
+  assert.match(main, /property\s+string\s+selectedDomain:\s*Plasmoid\.configuration\.domain/);
   assert.match(main, /property\s+var\s+workspaceList:\s*\[\]/);
   assert.match(main, /property\s+string\s+selectedWorkspaceId:\s*Plasmoid\.configuration\.selectedWorkspace/);
 
   // Verify functions
+  assert.match(main, /function\s+selectDomain\s*\(\s*newDomain\s*\)/);
   assert.match(main, /function\s+selectWorkspace\s*\(\s*wsId\s*\)/);
   assert.match(main, /function\s+loadWorkspaces\s*\(\s*token/);
 
@@ -408,6 +411,8 @@ test('main.qml defines workspace management properties and functions', () => {
 
 test('FullRepresentation.qml contains workspace selector ComboBox with responsive layout', () => {
   const content = fs.readFileSync('contents/ui/FullRepresentation.qml', 'utf8');
+  assert.match(content, /domainComboBox/);
+  assert.match(content, /selectDomain/);
   assert.match(content, /workspaceComboBox/);
   assert.match(content, /selectWorkspace/);
   assert.match(content, /clip:\s*true/);

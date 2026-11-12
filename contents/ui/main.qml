@@ -33,7 +33,9 @@ PlasmoidItem {
     property var allRunningTimers: []
     property var otherRunningTimers: []
 
-    // Workspace state
+    // Domain and Workspace state
+    property var domainList: []
+    property string selectedDomain: Plasmoid.configuration.domain || ""
     property var workspaceList: []
     property string selectedWorkspaceId: Plasmoid.configuration.selectedWorkspace || ""
 
@@ -85,6 +87,29 @@ PlasmoidItem {
         otherRunningTimers = others;
     }
 
+    function selectDomain(newDomain) {
+        if (!newDomain || newDomain === selectedDomain) return;
+        selectedDomain = newDomain;
+        Plasmoid.configuration.domain = newDomain;
+        authToken = "";
+        currentUser = null;
+        selectedWorkspaceId = "";
+        Plasmoid.configuration.selectedWorkspace = "";
+        workspaceList = [];
+        scheduleList = [];
+        activeCard = null;
+        isActiveCardRunning = false;
+        allRunningTimers = [];
+        otherRunningTimers = [];
+        refreshData();
+    }
+
+    function selectWorkspace(wsId) {
+        selectedWorkspaceId = wsId || "";
+        Plasmoid.configuration.selectedWorkspace = selectedWorkspaceId;
+        refreshData();
+    }
+
     function ensureAuthenticated(callback) {
         if (authToken && currentUser) {
             return callback(null, authToken);
@@ -93,7 +118,7 @@ PlasmoidItem {
         var sUrl = Plasmoid.configuration.serverUrl;
         var uName = Plasmoid.configuration.username;
         var pWord = Plasmoid.configuration.password;
-        var dom = (Plasmoid.configuration.domain || "").trim();
+        var dom = (selectedDomain || Plasmoid.configuration.domain || "").trim();
 
         if (!uName || !pWord) {
             statusMessage = i18n("Please configure username and password in settings.");
@@ -102,24 +127,60 @@ PlasmoidItem {
 
         statusMessage = i18n("Authenticating...");
 
+        // If domainList is not discovered yet, discover domains with a domain-less login call
+        if (!domainList || domainList.length === 0) {
+            FattoClient.login(sUrl, uName, pWord, null, function(err, data) {
+                if (err) {
+                    if (dom) {
+                        FattoClient.login(sUrl, uName, pWord, dom, handleLoginResult);
+                        return;
+                    }
+                    statusMessage = i18n("Login failed: %1", err.message);
+                    return callback(err);
+                }
+                if (data && data.requires_domain_choice) {
+                    domainList = data.domains || [];
+                    var chosen = dom;
+                    if (!chosen || domainList.indexOf(chosen) === -1) {
+                        chosen = (domainList.indexOf("pig") !== -1 ? "pig" : domainList[0]) || "";
+                        selectedDomain = chosen;
+                        Plasmoid.configuration.domain = chosen;
+                    }
+                    FattoClient.login(sUrl, uName, pWord, chosen, handleLoginResult);
+                    return;
+                }
+                if (data && data.token) {
+                    if (data.domain) {
+                        domainList = [data.domain];
+                        selectedDomain = data.domain;
+                        Plasmoid.configuration.domain = data.domain;
+                    }
+                    handleLoginResult(null, data);
+                    return;
+                }
+                handleLoginResult(new Error("Invalid login response"), null);
+            });
+            return;
+        }
+
+        // Domain list already known, login directly with selectedDomain
+        FattoClient.login(sUrl, uName, pWord, dom, handleLoginResult);
+
         function handleLoginResult(err, data) {
             if (err) {
                 statusMessage = i18n("Login failed: %1", err.message);
                 return callback(err);
             }
             if (data && data.requires_domain_choice) {
-                var domains = data.domains || [];
-                var chosenDomain = dom;
-                if (!chosenDomain || domains.indexOf(chosenDomain) === -1) {
-                    chosenDomain = domains.indexOf("pig") !== -1 ? "pig" : (domains[0] || "");
-                    if (chosenDomain) {
-                        Plasmoid.configuration.domain = chosenDomain;
-                    }
+                domainList = data.domains || [];
+                var chosen = dom;
+                if (!chosen || domainList.indexOf(chosen) === -1) {
+                    chosen = (domainList.indexOf("pig") !== -1 ? "pig" : domainList[0]) || "";
+                    selectedDomain = chosen;
+                    Plasmoid.configuration.domain = chosen;
                 }
-                if (chosenDomain) {
-                    FattoClient.login(sUrl, uName, pWord, chosenDomain, handleLoginResult);
-                    return;
-                }
+                FattoClient.login(sUrl, uName, pWord, chosen, handleLoginResult);
+                return;
             }
             if (!data || !data.token) {
                 statusMessage = i18n("Login failed: No authentication token received");
@@ -127,17 +188,15 @@ PlasmoidItem {
             }
             authToken = data.token || "";
             currentUser = data.user || data;
+            if (data.domain) {
+                selectedDomain = data.domain;
+                if (!domainList || domainList.length === 0) {
+                    domainList = [data.domain];
+                }
+            }
             statusMessage = "";
             callback(null, authToken);
         }
-
-        FattoClient.login(sUrl, uName, pWord, dom, handleLoginResult);
-    }
-
-    function selectWorkspace(wsId) {
-        selectedWorkspaceId = wsId || "";
-        Plasmoid.configuration.selectedWorkspace = selectedWorkspaceId;
-        refreshData();
     }
 
     function loadWorkspaces(token, callback) {

@@ -69,37 +69,80 @@ Item {
             }
         }
 
-        // Header bar row 2: Workspace selector combobox
-        RowLayout {
+        // Header bar row 2: Domain and Workspace selector comboboxes
+        GridLayout {
             Layout.fillWidth: true
-            spacing: Kirigami.Units.smallSpacing
-            visible: plasmoidRoot.workspaceList && plasmoidRoot.workspaceList.length > 0
+            columns: (root.width >= Kirigami.Units.gridUnit * 22 && domainRow.visible && workspaceRow.visible) ? 2 : 1
+            rowSpacing: Kirigami.Units.smallSpacing
+            columnSpacing: Kirigami.Units.smallSpacing
 
-            Kirigami.Icon {
-                source: "folder-symbolic"
-                implicitWidth: 16
-                implicitHeight: 16
-                opacity: 0.7
-            }
-
-            QQC2.ComboBox {
-                id: workspaceComboBox
+            // Domain selector
+            RowLayout {
+                id: domainRow
                 Layout.fillWidth: true
-                model: plasmoidRoot.workspaceList
-                textRole: "name"
-                valueRole: "id"
+                spacing: Kirigami.Units.smallSpacing
+                visible: plasmoidRoot.domainList && plasmoidRoot.domainList.length > 1
 
-                currentIndex: {
-                    if (!plasmoidRoot.workspaceList) return 0;
-                    for (var i = 0; i < plasmoidRoot.workspaceList.length; i++) {
-                        if (plasmoidRoot.workspaceList[i].id === plasmoidRoot.selectedWorkspaceId) return i;
-                    }
-                    return 0;
+                Kirigami.Icon {
+                    source: "network-server-symbolic"
+                    implicitWidth: 16
+                    implicitHeight: 16
+                    opacity: 0.7
                 }
 
-                onActivated: function(index) {
-                    var item = plasmoidRoot.workspaceList[index];
-                    if (item) plasmoidRoot.selectWorkspace(item.id);
+                QQC2.ComboBox {
+                    id: domainComboBox
+                    Layout.fillWidth: true
+                    model: plasmoidRoot.domainList
+
+                    currentIndex: {
+                        if (!plasmoidRoot.domainList) return 0;
+                        var idx = plasmoidRoot.domainList.indexOf(plasmoidRoot.selectedDomain);
+                        return idx >= 0 ? idx : 0;
+                    }
+
+                    onActivated: function(index) {
+                        var d = plasmoidRoot.domainList[index];
+                        if (d && d !== plasmoidRoot.selectedDomain) {
+                            plasmoidRoot.selectDomain(d);
+                        }
+                    }
+                }
+            }
+
+            // Workspace selector
+            RowLayout {
+                id: workspaceRow
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+                visible: plasmoidRoot.workspaceList && plasmoidRoot.workspaceList.length > 0
+
+                Kirigami.Icon {
+                    source: "folder-symbolic"
+                    implicitWidth: 16
+                    implicitHeight: 16
+                    opacity: 0.7
+                }
+
+                QQC2.ComboBox {
+                    id: workspaceComboBox
+                    Layout.fillWidth: true
+                    model: plasmoidRoot.workspaceList
+                    textRole: "name"
+                    valueRole: "id"
+
+                    currentIndex: {
+                        if (!plasmoidRoot.workspaceList) return 0;
+                        for (var i = 0; i < plasmoidRoot.workspaceList.length; i++) {
+                            if (plasmoidRoot.workspaceList[i].id === plasmoidRoot.selectedWorkspaceId) return i;
+                        }
+                        return 0;
+                    }
+
+                    onActivated: function(index) {
+                        var item = plasmoidRoot.workspaceList[index];
+                        if (item) plasmoidRoot.selectWorkspace(item.id);
+                    }
                 }
             }
         }
