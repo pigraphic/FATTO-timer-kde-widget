@@ -13,6 +13,10 @@ Rectangle {
     property int userTotalSeconds: 0
     property int globalTotalSeconds: 0
 
+    readonly property bool isNarrow: width < Kirigami.Units.gridUnit * 18
+    implicitHeight: isNarrow ? (Kirigami.Units.gridUnit * 9.5) : (Kirigami.Units.gridUnit * 7)
+    clip: true
+
     signal toggleTimer()
 
     radius: Kirigami.Units.smallSpacing * 2
@@ -45,6 +49,7 @@ Rectangle {
                     font.bold: true
                     font.family: "Monospace"
                     color: Kirigami.Theme.highlightedTextColor
+                    elide: Text.ElideRight
                 }
             }
 
@@ -60,15 +65,19 @@ Rectangle {
                 text: root.activeCard ? (root.activeCard.column_name || "") : ""
                 font.pixelSize: Kirigami.Units.gridUnit * 0.75
                 opacity: 0.7
+                elide: Text.ElideRight
+                Layout.maximumWidth: Kirigami.Units.gridUnit * 6
             }
         }
 
         Item { height: Kirigami.Units.smallSpacing }
 
-        // Central timer and main action button
-        RowLayout {
+        // Central timer and main action button in responsive grid
+        GridLayout {
             Layout.fillWidth: true
-            spacing: Kirigami.Units.gridUnit
+            columns: root.isNarrow ? 1 : 2
+            columnSpacing: Kirigami.Units.gridUnit
+            rowSpacing: Kirigami.Units.smallSpacing
 
             // Dual time counters
             ColumnLayout {
@@ -81,6 +90,7 @@ Rectangle {
                         text: i18n("Today (Yours):")
                         font.pixelSize: Kirigami.Units.gridUnit * 0.8
                         opacity: 0.75
+                        elide: Text.ElideRight
                     }
                     QQC2.Label {
                         text: TimeUtils.formatSeconds(root.todaySeconds)
@@ -98,12 +108,14 @@ Rectangle {
                         font.pixelSize: Kirigami.Units.gridUnit * 0.75
                         font.family: "Monospace"
                         opacity: 0.85
+                        elide: Text.ElideRight
                     }
                     QQC2.Label {
                         text: i18n("• All: %1", TimeUtils.formatSeconds(root.globalTotalSeconds))
                         font.pixelSize: Kirigami.Units.gridUnit * 0.75
                         font.family: "Monospace"
                         opacity: 0.6
+                        elide: Text.ElideRight
                     }
                 }
             }
@@ -111,9 +123,10 @@ Rectangle {
             // Big Start/Pause Button
             QQC2.Button {
                 id: actionButton
-                enabled: root.activeCard !== null
-                Layout.preferredHeight: Kirigami.Units.gridUnit * 2.6
-                Layout.preferredWidth: Kirigami.Units.gridUnit * 5.5
+                enabled: !!root.activeCard
+                Layout.fillWidth: root.isNarrow
+                Layout.preferredHeight: Kirigami.Units.gridUnit * 2.5
+                Layout.preferredWidth: root.isNarrow ? -1 : Kirigami.Units.gridUnit * 5.5
                 text: root.isRunning ? i18n("Pause") : i18n("Start")
                 icon.name: root.isRunning ? "media-playback-pause" : "media-playback-start"
 

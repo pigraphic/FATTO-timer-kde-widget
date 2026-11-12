@@ -13,6 +13,7 @@ Rectangle {
     signal cardClicked()
 
     height: 52
+    clip: true
     radius: Kirigami.Units.smallSpacing
     color: isSelected ?
            Kirigami.Theme.highlightColor :
@@ -57,6 +58,7 @@ Rectangle {
             height: 22
             width: codeLabel.implicitWidth + 12
             radius: 4
+            clip: true
             color: root.isSelected ?
                    Qt.rgba(1.0, 1.0, 1.0, 0.25) :
                    Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.1)
@@ -69,6 +71,7 @@ Rectangle {
                 font.family: "Monospace"
                 font.pixelSize: Kirigami.Units.gridUnit * 0.7
                 color: root.isSelected ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
+                elide: Text.ElideRight
             }
         }
 
@@ -87,6 +90,8 @@ Rectangle {
             font.pixelSize: Kirigami.Units.gridUnit * 0.65
             opacity: 0.8
             color: root.isSelected ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
+            elide: Text.ElideRight
+            Layout.maximumWidth: Kirigami.Units.gridUnit * 6
         }
     }
 }

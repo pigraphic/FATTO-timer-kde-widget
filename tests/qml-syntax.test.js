@@ -367,3 +367,18 @@ test('main.qml has valid structure, bindings, and balanced braces', () => {
   assert.strictEqual(braceCount, 0, 'Braces must be balanced in main.qml');
   assert.strictEqual(parenCount, 0, 'Parentheses must be balanced in main.qml');
 });
+
+test('ActiveCardHero.qml handles narrow width responsively without overflow', () => {
+  const content = fs.readFileSync('contents/ui/ActiveCardHero.qml', 'utf8');
+  assert.match(content, /isNarrow/);
+  assert.match(content, /clip:\s*true/);
+  assert.match(content, /Layout\.fillWidth:\s*true/);
+  assert.match(content, /readonly\s+property\s+bool\s+isNarrow:\s*width\s*<\s*Kirigami\.Units\.gridUnit\s*\*\s*18/);
+  assert.match(content, /implicitHeight:\s*isNarrow\s*\?\s*\(Kirigami\.Units\.gridUnit\s*\*\s*9\.5\)\s*:\s*\(Kirigami\.Units\.gridUnit\s*\*\s*7\)/);
+});
+
+test('CardListItem.qml contains clipping and text elision for boundary containment', () => {
+  const content = fs.readFileSync('contents/ui/CardListItem.qml', 'utf8');
+  assert.match(content, /clip:\s*true/);
+  assert.match(content, /elide:\s*Text\.ElideRight/);
+});
